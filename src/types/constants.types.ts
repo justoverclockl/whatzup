@@ -1,4 +1,6 @@
-import { PuppeteerDefaultOptions, WhatsappEvents, WhatsappStatus } from "../types/constants";
+import {PuppeteerDefaultOptions, WhatsappEvents, WhatsappStatus} from "./client.types";
+
+
 export declare const WHATSAPP_WEB_URL: string;
 export declare const DEFAULT_CLIENT_OPTIONS: PuppeteerDefaultOptions;
 export declare const WHATSAPP_STATUS: {
