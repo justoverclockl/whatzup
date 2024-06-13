@@ -3,7 +3,7 @@
 </div>
 
 ## About
-**Rewrite from Whatsapp-web.js library with TS
+**Rewrite from Whatsapp-web.js library with TS**
 **A WhatsApp API client that connects through the WhatsApp Web browser app based on whatsapp-web.js**
 
 The library works by launching the WhatsApp Web browser application and managing it using Puppeteer to create an instance of WhatsApp Web, thereby mitigating the risk of being blocked. 
