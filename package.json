@@ -1,0 +1,31 @@
+{
+  "name": "whatzup",
+  "version": "1.0.0",
+  "description": "A whatsapp client library for NodeJs that connects with Whatsapp Web browser app",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup"
+  },
+  "keywords": [
+    "whatsapp-web-js",
+    "whatsapp-js",
+    "node-whatsapp",
+    "nodejs-whatsapp"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Marco Colia",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^22.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "prettier": "^3.3.2",
+    "tsup": "^8.1.0",
+    "typescript": "^5.4.5"
+  }
+}
