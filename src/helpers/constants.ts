@@ -6,7 +6,7 @@ export const DEFAULT_CLIENT_OPTIONS: PuppeteerDefaultOptions = {
   puppeteer: {
     headless: false,
     defaultViewport: null,
-    browserURL: WHATSAPP_WEB_URL
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
   },
   webVersion: "2.2346.52",
   webVersionCache: {
