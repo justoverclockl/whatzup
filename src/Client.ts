@@ -1,16 +1,21 @@
-import { EventEmitter } from 'node:events'
 import puppeteer, { Browser, Page } from 'puppeteer'
 import { DEFAULT_CLIENT_OPTIONS, WHATSAPP_WEB_URL } from './helpers/constants'
 import { PuppeteerDefaultOptions } from './types/client.types'
+import { WhatzupEvents } from './Events/Events'
 
-export class Client extends EventEmitter {
+export class Client {
     private options: PuppeteerDefaultOptions
     private page?: Page
     private browser?: Browser
+    private Events: WhatzupEvents
 
     constructor(options: Partial<PuppeteerDefaultOptions> = {}) {
-        super()
         this.options = { ...DEFAULT_CLIENT_OPTIONS, ...options }
+        this.Events = new WhatzupEvents()
+    }
+
+    on(event: string, listener: (...args: any[]) => void) {
+        this.Events.on(event, listener)
     }
 
     async initialize(): Promise<void> {
@@ -18,11 +23,13 @@ export class Client extends EventEmitter {
             await this.checkBrowserWSEndpoint()
             await this.initializeBrowser()
             await this.setPageSettings()
-            await this.page?.goto(WHATSAPP_WEB_URL, {
-                waitUntil: 'load',
-                timeout: 0,
-                referer: 'https://whatsapp.com/',
-            })
+            await this.page
+                ?.goto(WHATSAPP_WEB_URL, {
+                    waitUntil: 'load',
+                    timeout: 0,
+                    referer: 'https://whatsapp.com/',
+                })
+                .then(() => this.Events.emitReady('Client initialized!'))
         } catch (error) {
             console.error('Failed to initialize client:', error)
         }
