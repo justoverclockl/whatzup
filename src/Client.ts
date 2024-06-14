@@ -2,6 +2,7 @@ import puppeteer, { Browser, Page } from 'puppeteer'
 import { DEFAULT_CLIENT_OPTIONS, WHATSAPP_WEB_URL } from './helpers/constants'
 import { PuppeteerDefaultOptions } from './types/client.types'
 import { WhatzupEvents } from './Events/Events'
+import { INTRO_QRCODE_SELECTOR } from './selectors/selectors'
 
 export class Client {
     private options: PuppeteerDefaultOptions
@@ -14,36 +15,37 @@ export class Client {
         this.Events = new WhatzupEvents()
     }
 
-    async initialize(): Promise<void> {
-        try {
-            await this.checkBrowserWSEndpoint()
-            await this.initializeBrowser()
-            await this.setPageSettings()
-            await this.page
-                ?.goto(WHATSAPP_WEB_URL, {
-                    waitUntil: 'load',
-                    timeout: 0,
-                    referer: 'https://whatsapp.com/',
-                })
-                .then(() => this.Events.emitReady('Client initialized!'))
-        } catch (error) {
-            console.error('Failed to initialize client:', error)
-        }
+    on(event: string, listener: (...args: any[]) => void) {
+        this.Events.on(event, listener)
     }
 
-    private async checkBrowserWSEndpoint(): Promise<void> {
-        if (this.options.browserWSEndpoint) {
-            this.browser = await puppeteer.connect(this.options.puppeteer)
-            this.page = await this.browser.newPage()
+    async initialize(): Promise<void> {
+        try {
+            await this.initializeBrowser()
+            await this.setPageSettings()
+
+            await this.page?.goto(WHATSAPP_WEB_URL, {
+                waitUntil: 'load',
+                timeout: 0,
+                referer: 'https://whatsapp.com/',
+            })
+
+            this.Events.emitReady('Client initialized!')
+            await this.waitForPageLoadingScreen(this.page)
+        } catch (error) {
+            this.Events.emitReady('Failed to initialize client', error as Error)
         }
     }
 
     private async initializeBrowser(): Promise<void> {
-        if (!this.browser) {
+        try {
             this.browser = await puppeteer.launch(this.options.puppeteer)
             const pages = await this.browser.pages()
             this.page =
                 pages.length > 0 ? pages[0] : await this.browser.newPage()
+        } catch (error) {
+            console.error('Failed to launch browser:', error)
+            throw error
         }
     }
 
@@ -64,4 +66,20 @@ export class Client {
             window.Error = Error
         })
     }
+
+    private async waitForPageLoadingScreen(page: Page | undefined) {
+        try {
+            await page?.waitForSelector(INTRO_QRCODE_SELECTOR, {
+                visible: true,
+            })
+            this.Events.emitLoadComplete('Page loaded, ready to scan QR!')
+        } catch (error) {
+            this.Events.emitLoadComplete(
+                'Page loaded, ready to scan QR!',
+                error as Error
+            )
+        }
+    }
+
+    private async getQrCode() {}
 }
