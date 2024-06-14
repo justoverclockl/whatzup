@@ -14,10 +14,6 @@ export class Client {
         this.Events = new WhatzupEvents()
     }
 
-    on(event: string, listener: (...args: any[]) => void) {
-        this.Events.on(event, listener)
-    }
-
     async initialize(): Promise<void> {
         try {
             await this.checkBrowserWSEndpoint()
