@@ -2,7 +2,7 @@ import puppeteer, { Browser, Page } from 'puppeteer'
 import { DEFAULT_CLIENT_OPTIONS, WHATSAPP_WEB_URL } from './helpers/constants'
 import { PuppeteerDefaultOptions } from './types/client.types'
 import { WhatzupEvents } from './Events/Events'
-import { INTRO_QRCODE_SELECTOR } from './selectors/selectors'
+import { INTRO_QRCODE_SELECTOR, QR_CONTAINER } from './selectors/selectors'
 
 export class Client {
     private options: PuppeteerDefaultOptions
@@ -32,6 +32,7 @@ export class Client {
 
             this.Events.emitReady('Client initialized!')
             await this.waitForPageLoadingScreen(this.page)
+            await this.getQrCode(this.page)
         } catch (error) {
             this.Events.emitReady('Failed to initialize client', error as Error)
         }
@@ -63,7 +64,7 @@ export class Client {
         }
 
         await this.page.evaluateOnNewDocument(() => {
-            window.Error = Error
+            (window as any).Error = Error;
         })
     }
 
@@ -81,5 +82,42 @@ export class Client {
         }
     }
 
-    private async getQrCode() {}
+    private async getQrCode(page: Page | undefined): Promise<string | null> {
+        if (!page) {
+            return null
+        }
+
+        const attributeValue: string | null = await page?.evaluate((selector, attribute) => {
+            return new Promise<string | null>((resolve) => {
+                const element = document.querySelector(selector)
+                if (!element) {
+                    return resolve(null)
+                }
+
+                const observer: MutationObserver = new MutationObserver(() => {
+                    if (element.hasAttribute(attribute)) {
+                        const value: string | null = element.getAttribute(attribute);
+                        observer.disconnect();
+                        resolve(value);
+                    }
+                });
+
+                observer.observe(element, { attributes: true })
+
+                if (element.hasAttribute(attribute)) {
+                    const initialValue = element.getAttribute(attribute);
+                    observer.disconnect();
+                    resolve(initialValue);
+                }
+            })
+        }, QR_CONTAINER, 'data-ref')
+
+
+        if (attributeValue !== null) {
+            this.Events.emitQr(attributeValue);
+        }
+
+
+        return attributeValue;
+    }
 }
