@@ -2,7 +2,7 @@ import puppeteer, { Browser, Page } from 'puppeteer'
 import { DEFAULT_CLIENT_OPTIONS, WHATSAPP_WEB_URL } from './helpers/constants'
 import { PuppeteerDefaultOptions } from './types/client.types'
 import { WhatzupEvents } from './Events/Events'
-import { INTRO_QRCODE_SELECTOR, QR_CONTAINER } from './selectors/selectors'
+import { INTRO_QRCODE_SELECTOR, PAIRING_CODE_BUTTON, QR_CONTAINER } from './selectors/selectors'
 
 export class Client {
     private options: PuppeteerDefaultOptions
