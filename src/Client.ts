@@ -1,18 +1,23 @@
 import puppeteer, { Browser, Page } from 'puppeteer'
 import { DEFAULT_CLIENT_OPTIONS, WHATSAPP_WEB_URL } from './helpers/constants'
-import { PuppeteerDefaultOptions } from './types/client.types'
+import { ClientOptions } from './types/client.types'
 import { WhatzupEvents } from './Events/Events'
 import { INTRO_QRCODE_SELECTOR, QR_CONTAINER } from './selectors/selectors'
+import { LocalAuth } from './authStrategies/LocalAuth'
 
 export class Client {
-    private options: PuppeteerDefaultOptions
+    private options: ClientOptions
     private page?: Page
     private browser?: Browser
     private Events: WhatzupEvents
+    private authStrategy?: LocalAuth
 
-    constructor(options: Partial<PuppeteerDefaultOptions> = {}) {
+    constructor(options: ClientOptions = {}) {
         this.options = { ...DEFAULT_CLIENT_OPTIONS, ...options }
         this.Events = new WhatzupEvents()
+        if (this.options.authStrategy) {
+            this.authStrategy = options.authStrategy
+        }
     }
 
     on(event: string, listener: (...args: any[]) => void) {
@@ -54,7 +59,9 @@ export class Client {
     private async setPageSettings(): Promise<void> {
         if (!this.page) return
 
-        await this.page.setUserAgent(this.options.userAgent)
+        if (this.options.userAgent != null) {
+            await this.page.setUserAgent(this.options.userAgent)
+        }
 
         if (this.options.proxyAuthentication) {
             await this.page.authenticate(this.options.proxyAuthentication)
