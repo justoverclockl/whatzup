@@ -1,13 +1,13 @@
 import path from 'path'
 import { LocalAuthOptions } from '../types/localAuth.types'
-import { Cookie, Page } from 'puppeteer'
+import { Page } from 'puppeteer'
 import * as fs from 'node:fs'
 
 export class LocalAuth {
-    public path: string
+    public sessionPath: string
     public clientId: string
 
-    constructor({ clientId, path: authPath }: LocalAuthOptions) {
+    constructor({ clientId, sessionPath }: LocalAuthOptions) {
         const idRegex: RegExp = /^[-_\w]+$/i
         if (clientId && !idRegex.test(clientId)) {
             throw new Error(
@@ -15,16 +15,14 @@ export class LocalAuth {
             )
         }
 
-        this.path = path.resolve(authPath || './.whatzupAuth/')
+        this.sessionPath = path.resolve(`${process.cwd()}/${sessionPath}` || './.whatzupAuth/')
         this.clientId = clientId || ''
     }
 
-    private async saveCookies(page: Page): Promise<void> {
-        const cookies = await page.cookies();
-        fs.writeFileSync(path.join(this.path, 'cookies.json'), JSON.stringify(cookies, null, 2));
-    }
-
     private async saveLocalStorage(page: Page): Promise<void> {
+        const sessionPath: string = this.clientId ? `session-${this.clientId}` : 'session';
+        const dirPath: string = path.join(process.cwd(), sessionPath);
+
         const localStorageData = await page.evaluate(() => {
             const json: { [key: string]: string | null } = {};
             for (let i = 0; i < localStorage.length; i++) {
@@ -35,10 +33,14 @@ export class LocalAuth {
             }
             return json;
         });
-        fs.writeFileSync(path.join(this.path, 'localStorage.json'), JSON.stringify(localStorageData, null, 2));
+
+        fs.writeFileSync(path.join(dirPath, 'localStorage.json'), JSON.stringify(localStorageData, null, 2));
     }
 
     private async saveIndexedDB(page: Page): Promise<void> {
+        const sessionPath: string = this.clientId ? `session-${this.clientId}` : 'session';
+        const dirPath: string = path.join(process.cwd(), sessionPath);
+
         const indexedDBData = await page.evaluate(() => {
             return new Promise<{ [key: string]: any }>((resolve, reject) => {
                 let data: { [storeName: string]: { [key: string]: any } } = {};
@@ -71,7 +73,7 @@ export class LocalAuth {
                 };
             });
         });
-        fs.writeFileSync(path.join(this.path, 'indexedDB.json'), JSON.stringify(indexedDBData, null, 2));
+        fs.writeFileSync(path.join(dirPath, 'indexedDB.json'), JSON.stringify(indexedDBData, null, 2));
     }
 
     async saveSession(page: Page): Promise<void> {
@@ -82,23 +84,16 @@ export class LocalAuth {
             fs.mkdirSync(dirPath)
         }
 
-        await this.saveCookies(page);
         await this.saveLocalStorage(page);
         await this.saveIndexedDB(page);
     }
 
     async restoreSession(page: Page): Promise<void> {
         const sessionPath: string = this.clientId ? `session-${this.clientId}` : 'session';
-        const dirPath: string = path.join(this.path, sessionPath);
-
-        const cookiesJson: string = path.join(dirPath, 'cookies.json');
-
-        if (fs.existsSync(cookiesJson)) {
-            const cookies: Cookie[] = JSON.parse(fs.readFileSync(cookiesJson, 'utf-8'));
-            await page.setCookie(...cookies);
-        }
+        const dirPath: string = path.join(sessionPath);
 
         const sessionJson: string = path.join(dirPath, `localStorage.json`);
+        console.log(sessionJson)
         if (fs.existsSync(sessionJson)) {
             const localStorageData = JSON.parse(fs.readFileSync(sessionJson, 'utf-8'));
             await page.evaluateOnNewDocument((data) => {

@@ -1,5 +1,3 @@
-export * from './types/client.types'
-export * from './types/constants.types'
-export * from './types/localAuth.types'
+export * from './types/index'
 export * from './Client'
 export * from './authStrategies/LocalAuth'

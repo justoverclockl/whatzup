@@ -1,6 +1,6 @@
 import puppeteer, { Browser, Page } from 'puppeteer'
 import { DEFAULT_CLIENT_OPTIONS, WHATSAPP_WEB_URL } from './helpers/constants'
-import { ClientOptions } from './types/client.types'
+import { ClientOptions } from './types'
 import { WhatzupEvents } from './Events/Events'
 import { INTRO_QRCODE_SELECTOR, QR_CONTAINER, QR_SCANNED } from './selectors/selectors'
 import { LocalAuth } from './authStrategies/LocalAuth'
@@ -19,7 +19,7 @@ export class Client {
         this.Events = new WhatzupEvents()
         if (this.options.authStrategy) {
             this.authStrategy = options.authStrategy
-            console.log(`Auth strategy initialized with path: ${this.authStrategy?.path} and clientId: ${this.authStrategy?.clientId}`);
+            console.log(`Auth strategy initialized with path: ${this.authStrategy?.sessionPath} and clientId: ${this.authStrategy?.clientId}`);
         }
     }
 
@@ -32,10 +32,12 @@ export class Client {
             await this.initializeBrowser()
             await this.setPageSettings()
 
-            if (this.authStrategy && this.page) {
-                const sessionExists = await this.checkSessionExists();
-                if (!sessionExists) {
-                    await this.authStrategy.restoreSession(this.page);
+            if (this.authStrategy) {
+                const sessionExists: boolean = await this.checkSessionExists();
+
+                if (sessionExists) {
+                    await this.authStrategy.restoreSession(this.page!);
+                    await this.waitFor(2000)
                 }
             }
 
@@ -52,10 +54,8 @@ export class Client {
 
             const isQrScanned = await this.qrCodeScanned(this.page);
 
-            if (isQrScanned) {
-                if (this.authStrategy && !(await this.checkSessionExists())) {
-                    await this.authStrategy.saveSession(this.page!);
-                }
+            if (isQrScanned && this.authStrategy) {
+                await this.authStrategy.saveSession(this.page!);
             }
 
         } catch (error) {
@@ -166,8 +166,13 @@ export class Client {
     }
 
     private clientSessionPath(): string {
-        const sessionPath: string = this.authStrategy?.clientId ? `session-${this.authStrategy.clientId}` : 'session';
-        return path.join(this.authStrategy!.path, sessionPath);
+        if (!this.authStrategy) {
+            throw new Error('Auth strategy is not defined');
+        }
+
+        const clientId = this.authStrategy.clientId;
+        const sessionDir = clientId ? `session-${clientId}` : 'session';
+        return path.join(sessionDir);
     }
 
     private async qrCodeScanned(page: Page | undefined): Promise<boolean> {
@@ -195,5 +200,9 @@ export class Client {
         } catch (error) {
             return false;
         }
+    }
+
+    async waitFor(ms: number): Promise<void> {
+        return new Promise<void>(resolve => setTimeout(() => resolve(), ms));
     }
 }

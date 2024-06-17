@@ -1,4 +1,4 @@
 export interface LocalAuthOptions {
     clientId?: string
-    path?: string
+    sessionPath?: string
 }

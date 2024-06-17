@@ -1,4 +1,3 @@
-import { LocalAuthOptions } from './localAuth.types'
 import { LocalAuth } from '../authStrategies/LocalAuth'
 
 export type PuppeteerArgs =
@@ -28,6 +27,7 @@ export type PuppeteerArgs =
     | '--force-color-profile=srgb'
     | '--metrics-recording-only'
     | '--mute-audio'
+    | '--disable-web-security'
 
 export interface ClientOptions {
     puppeteer?: {
@@ -47,6 +47,7 @@ export interface ClientOptions {
     bypassCSP?: boolean
     proxyAuthentication?: undefined
     userDataPath?: string
+    userDataDir?: string
 }
 
 export enum WhatsappStatus {

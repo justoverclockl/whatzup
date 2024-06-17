@@ -1,4 +1,4 @@
-import { ClientOptions, WhatsappEvents, WhatsappStatus } from '../types/client.types'
+import { ClientOptions, WhatsappEvents, WhatsappStatus } from '../types'
 
 
 export const WHATSAPP_WEB_URL: string = "https://web.whatsapp.com/";
@@ -6,11 +6,7 @@ export const DEFAULT_CLIENT_OPTIONS: ClientOptions = {
   puppeteer: {
     headless: false,
     defaultViewport: null,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  },
-  webVersion: "2.2346.52",
-  webVersionCache: {
-    type: "local",
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security'],
   },
   authTimeoutMs: 0,
   qrMaxRetries: 0,
@@ -21,6 +17,7 @@ export const DEFAULT_CLIENT_OPTIONS: ClientOptions = {
   ffmpegPath: "ffmpeg",
   bypassCSP: false,
   proxyAuthentication: undefined,
+  userDataDir: './session-adminSession'
 };
 
 export const WHATSAPP_STATUS = {
