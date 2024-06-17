@@ -1,8 +1,8 @@
-import {PuppeteerDefaultOptions, WhatsappEvents, WhatsappStatus} from "../types/client.types";
+import { ClientOptions, WhatsappEvents, WhatsappStatus } from '../types/client.types'
 
 
 export const WHATSAPP_WEB_URL: string = "https://web.whatsapp.com/";
-export const DEFAULT_CLIENT_OPTIONS: PuppeteerDefaultOptions = {
+export const DEFAULT_CLIENT_OPTIONS: ClientOptions = {
   puppeteer: {
     headless: false,
     defaultViewport: null,

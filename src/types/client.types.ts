@@ -36,10 +36,6 @@ export interface ClientOptions {
         args: PuppeteerArgs[]
     }
     authStrategy?: LocalAuth
-    webVersion?: string
-    webVersionCache?: {
-        type: 'local' | 'remote'
-    }
     browserWSEndpoint?: string
     browserURL?: string
     authTimeoutMs?: number
@@ -50,6 +46,7 @@ export interface ClientOptions {
     ffmpegPath?: 'ffmpeg'
     bypassCSP?: boolean
     proxyAuthentication?: undefined
+    userDataPath?: string
 }
 
 export enum WhatsappStatus {

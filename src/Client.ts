@@ -2,21 +2,24 @@ import puppeteer, { Browser, Page } from 'puppeteer'
 import { DEFAULT_CLIENT_OPTIONS, WHATSAPP_WEB_URL } from './helpers/constants'
 import { ClientOptions } from './types/client.types'
 import { WhatzupEvents } from './Events/Events'
-import { INTRO_QRCODE_SELECTOR, QR_CONTAINER } from './selectors/selectors'
+import { INTRO_QRCODE_SELECTOR, QR_CONTAINER, QR_SCANNED } from './selectors/selectors'
 import { LocalAuth } from './authStrategies/LocalAuth'
+import path from 'path'
+import * as fs from 'node:fs'
 
 export class Client {
     private options: ClientOptions
     private page?: Page
     private browser?: Browser
     private Events: WhatzupEvents
-    private authStrategy?: LocalAuth
+    private readonly authStrategy?: LocalAuth
 
     constructor(options: ClientOptions = {}) {
         this.options = { ...DEFAULT_CLIENT_OPTIONS, ...options }
         this.Events = new WhatzupEvents()
         if (this.options.authStrategy) {
             this.authStrategy = options.authStrategy
+            console.log(`Auth strategy initialized with path: ${this.authStrategy?.path} and clientId: ${this.authStrategy?.clientId}`);
         }
     }
 
@@ -29,6 +32,13 @@ export class Client {
             await this.initializeBrowser()
             await this.setPageSettings()
 
+            if (this.authStrategy && this.page) {
+                const sessionExists = await this.checkSessionExists();
+                if (!sessionExists) {
+                    await this.authStrategy.restoreSession(this.page);
+                }
+            }
+
             await this.page?.goto(WHATSAPP_WEB_URL, {
                 waitUntil: 'load',
                 timeout: 0,
@@ -39,6 +49,15 @@ export class Client {
 
             await this.waitForPageLoadingScreen(this.page)
             await this.getQrCode(this.page)
+
+            const isQrScanned = await this.qrCodeScanned(this.page);
+
+            if (isQrScanned) {
+                if (this.authStrategy && !(await this.checkSessionExists())) {
+                    await this.authStrategy.saveSession(this.page!);
+                }
+            }
+
         } catch (error) {
             this.Events.emitReady('Failed to initialize client', error as Error)
         }
@@ -47,7 +66,7 @@ export class Client {
     private async initializeBrowser(): Promise<void> {
         try {
             this.browser = await puppeteer.launch(this.options.puppeteer)
-            const pages = await this.browser.pages()
+            const pages: Page[] = await this.browser.pages()
             this.page =
                 pages.length > 0 ? pages[0] : await this.browser.newPage()
         } catch (error) {
@@ -132,5 +151,49 @@ export class Client {
         }
 
         return attributeValue
+    }
+
+    private async checkSessionExists(): Promise<boolean> {
+        if (!this.authStrategy) {
+            return false;
+        }
+
+        const sessionPath: string = this.clientSessionPath();
+        const localStorageFile: string = path.join(sessionPath, 'localStorage.json');
+        const indexedDBFile: string = path.join(sessionPath, 'indexedDB.json');
+
+        return fs.existsSync(localStorageFile) && fs.existsSync(indexedDBFile);
+    }
+
+    private clientSessionPath(): string {
+        const sessionPath: string = this.authStrategy?.clientId ? `session-${this.authStrategy.clientId}` : 'session';
+        return path.join(this.authStrategy!.path, sessionPath);
+    }
+
+    private async qrCodeScanned(page: Page | undefined): Promise<boolean> {
+        try {
+            const isScanned: boolean | undefined = await page?.evaluate(async (selector: string): Promise<boolean> => {
+                return new Promise<boolean>((resolve) => {
+                    const element = document.querySelector(selector);
+                    if (element) {
+                        resolve(true);
+                        return;
+                    }
+
+                    const observer = new MutationObserver(() => {
+                        const scannedElement = document.querySelector(selector);
+                        if (scannedElement) {
+                            observer.disconnect();
+                            resolve(true);
+                        }
+                    });
+
+                    observer.observe(document, { childList: true, subtree: true });
+                });
+            }, QR_SCANNED);
+            return isScanned || false;
+        } catch (error) {
+            return false;
+        }
     }
 }
