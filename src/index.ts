@@ -1,3 +1,3 @@
 export * from './types/index'
 export * from './Client'
-export * from './authStrategies/LocalAuth'
+export * from './authStrategies/S3Auth'

@@ -1,4 +1,4 @@
-export interface LocalAuthOptions {
-    clientId?: string
-    sessionPath?: string
+export interface S3AuthOptions {
+    accessKey: string
+    secretKey: string
 }

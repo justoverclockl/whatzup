@@ -3,23 +3,21 @@ import { DEFAULT_CLIENT_OPTIONS, WHATSAPP_WEB_URL } from './helpers/constants'
 import { ClientOptions } from './types'
 import { WhatzupEvents } from './Events/Events'
 import { INTRO_QRCODE_SELECTOR, QR_CONTAINER, QR_SCANNED } from './selectors/selectors'
-import { LocalAuth } from './authStrategies/LocalAuth'
-import path from 'path'
-import * as fs from 'node:fs'
+import { S3Auth } from './authStrategies/S3Auth'
 
 export class Client {
     private options: ClientOptions
     private page?: Page
     private browser?: Browser
     private Events: WhatzupEvents
-    private readonly authStrategy?: LocalAuth
+    private readonly s3Auth?: S3Auth
 
     constructor(options: ClientOptions = {}) {
         this.options = { ...DEFAULT_CLIENT_OPTIONS, ...options }
         this.Events = new WhatzupEvents()
         if (this.options.authStrategy) {
-            this.authStrategy = options.authStrategy
-            console.log(`Auth strategy initialized with path: ${this.authStrategy?.sessionPath} and clientId: ${this.authStrategy?.clientId}`);
+            this.s3Auth = options.authStrategy
+            console.log(`Auth strategy initialized with path: ${this.s3Auth?.sessionPath} and clientId: ${this.s3Auth?.clientId}`);
         }
     }
 
@@ -31,15 +29,6 @@ export class Client {
         try {
             await this.initializeBrowser()
             await this.setPageSettings()
-
-            if (this.authStrategy) {
-                const sessionExists: boolean = await this.checkSessionExists();
-
-                if (sessionExists) {
-                    await this.authStrategy.restoreSession(this.page!);
-                    await this.waitFor(2000)
-                }
-            }
 
             await this.page?.goto(WHATSAPP_WEB_URL, {
                 waitUntil: 'load',
@@ -53,10 +42,6 @@ export class Client {
             await this.getQrCode(this.page)
 
             const isQrScanned = await this.qrCodeScanned(this.page);
-
-            if (isQrScanned && this.authStrategy) {
-                await this.authStrategy.saveSession(this.page!);
-            }
 
         } catch (error) {
             this.Events.emitReady('Failed to initialize client', error as Error)
@@ -151,28 +136,6 @@ export class Client {
         }
 
         return attributeValue
-    }
-
-    private async checkSessionExists(): Promise<boolean> {
-        if (!this.authStrategy) {
-            return false;
-        }
-
-        const sessionPath: string = this.clientSessionPath();
-        const localStorageFile: string = path.join(sessionPath, 'localStorage.json');
-        const indexedDBFile: string = path.join(sessionPath, 'indexedDB.json');
-
-        return fs.existsSync(localStorageFile) && fs.existsSync(indexedDBFile);
-    }
-
-    private clientSessionPath(): string {
-        if (!this.authStrategy) {
-            throw new Error('Auth strategy is not defined');
-        }
-
-        const clientId = this.authStrategy.clientId;
-        const sessionDir = clientId ? `session-${clientId}` : 'session';
-        return path.join(sessionDir);
     }
 
     private async qrCodeScanned(page: Page | undefined): Promise<boolean> {
