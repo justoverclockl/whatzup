@@ -15,10 +15,6 @@ export class Client {
     constructor(options: ClientOptions = {}) {
         this.options = { ...DEFAULT_CLIENT_OPTIONS, ...options }
         this.Events = new WhatzupEvents()
-        if (this.options.authStrategy) {
-            this.s3Auth = options.authStrategy
-            console.log(`Auth strategy initialized with path: ${this.s3Auth?.sessionPath} and clientId: ${this.s3Auth?.clientId}`);
-        }
     }
 
     on(event: string, listener: (...args: any[]) => void) {
