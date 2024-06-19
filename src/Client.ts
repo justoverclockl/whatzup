@@ -4,14 +4,14 @@ import { ClientOptions } from './types'
 import { WhatzupEvents } from './Events/Events'
 import { INTRO_QRCODE_SELECTOR, QR_CONTAINER, QR_SCANNED } from './selectors/selectors'
 import { BaseAuthStrategy } from './authStrategies/BaseAuthStrategy'
-import { S3Auth } from './authStrategies/S3Auth'
+import { isElementInDom } from './utils/elementObserver'
 
 export class Client {
     private options: ClientOptions
     private page?: Page
     private browser?: Browser
     private Events: WhatzupEvents
-    private authStrategy?: BaseAuthStrategy
+    private readonly authStrategy?: BaseAuthStrategy
 
     constructor(options: ClientOptions = {}) {
         this.options = { ...DEFAULT_CLIENT_OPTIONS, ...options }
@@ -39,20 +39,15 @@ export class Client {
 
             this.Events.emitReady('Client initialized!')
 
-            const isQrScanned = await this.qrCodeScanned(this.page);
+            const isAuthenticated: boolean = await this.isUserAuthenticated(this.page!)
 
-            // TODO: split into a separate method
-            if (isQrScanned) {
+            if (isAuthenticated) {
                 this.Events.emitAuthenticated('Authenticated')
-            }
-
-            if (!isQrScanned) {
+            } else {
                 await this.waitForPageLoadingScreen(this.page)
                 await this.getQrCode(this.page)
+                await this.checkForQrScan()
             }
-
-            // TODO: no need this because we can pass a normal strategy
-            console.log(this.authStrategy instanceof S3Auth)
 
             this.authStrategy?.afterBrowserInitialized()
 
@@ -151,31 +146,27 @@ export class Client {
         return attributeValue
     }
 
-    private async qrCodeScanned(page: Page | undefined): Promise<boolean> {
+    private async isUserAuthenticated(page: Page): Promise<boolean> {
         try {
-            const isScanned: boolean | undefined = await page?.evaluate(async (selector: string): Promise<boolean> => {
-                return new Promise<boolean>((resolve) => {
-                    const element = document.querySelector(selector);
-                    if (element) {
-                        resolve(true);
-                        return;
-                    }
-
-                    const observer: MutationObserver = new MutationObserver(() => {
-                        const scannedElement = document.querySelector(selector);
-                        if (scannedElement) {
-                            observer.disconnect();
-                            resolve(true);
-                        }
-                    });
-
-                    observer.observe(document, { childList: true, subtree: true });
-                });
-            }, QR_SCANNED);
-
-            return isScanned || false;
+            return await isElementInDom(page, QR_SCANNED)
         } catch (error) {
             return false;
+        }
+    }
+
+    private async qrCodeScanned(page: Page | undefined): Promise<boolean> {
+        return isElementInDom(page!, QR_SCANNED);
+    }
+
+    private async checkForQrScan(): Promise<void> {
+        while (true) {
+            const isQrScanned: boolean = await this.qrCodeScanned(this.page!);
+
+            if (isQrScanned) {
+                this.Events.emitAuthenticated('Authenticated');
+                break;
+            }
+            await this.waitFor(1000);
         }
     }
 
