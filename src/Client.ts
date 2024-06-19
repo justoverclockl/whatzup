@@ -3,18 +3,23 @@ import { DEFAULT_CLIENT_OPTIONS, WHATSAPP_WEB_URL } from './helpers/constants'
 import { ClientOptions } from './types'
 import { WhatzupEvents } from './Events/Events'
 import { INTRO_QRCODE_SELECTOR, QR_CONTAINER, QR_SCANNED } from './selectors/selectors'
-import { S3Auth } from './authStrategies/S3Auth'
+import { BaseAuthStrategy } from './authStrategies/BaseAuthStrategy'
+import { isElementInDom } from './utils/elementObserver'
 
 export class Client {
     private options: ClientOptions
     private page?: Page
     private browser?: Browser
     private Events: WhatzupEvents
-    private readonly s3Auth?: S3Auth
+    private readonly authStrategy?: BaseAuthStrategy
 
     constructor(options: ClientOptions = {}) {
         this.options = { ...DEFAULT_CLIENT_OPTIONS, ...options }
         this.Events = new WhatzupEvents()
+
+        if (this.options.authStrategy) {
+            this.authStrategy = options.authStrategy;
+        }
     }
 
     on(event: string, listener: (...args: any[]) => void) {
@@ -34,10 +39,17 @@ export class Client {
 
             this.Events.emitReady('Client initialized!')
 
-            await this.waitForPageLoadingScreen(this.page)
-            await this.getQrCode(this.page)
+            const isAuthenticated: boolean = await this.isUserAuthenticated(this.page!)
 
-            const isQrScanned = await this.qrCodeScanned(this.page);
+            if (isAuthenticated) {
+                this.Events.emitAuthenticated('Authenticated')
+            } else {
+                await this.waitForPageLoadingScreen(this.page)
+                await this.getQrCode(this.page)
+                await this.checkForQrScan()
+            }
+
+            this.authStrategy?.afterBrowserInitialized()
 
         } catch (error) {
             this.Events.emitReady('Failed to initialize client', error as Error)
@@ -134,30 +146,27 @@ export class Client {
         return attributeValue
     }
 
-    private async qrCodeScanned(page: Page | undefined): Promise<boolean> {
+    private async isUserAuthenticated(page: Page): Promise<boolean> {
         try {
-            const isScanned: boolean | undefined = await page?.evaluate(async (selector: string): Promise<boolean> => {
-                return new Promise<boolean>((resolve) => {
-                    const element = document.querySelector(selector);
-                    if (element) {
-                        resolve(true);
-                        return;
-                    }
-
-                    const observer = new MutationObserver(() => {
-                        const scannedElement = document.querySelector(selector);
-                        if (scannedElement) {
-                            observer.disconnect();
-                            resolve(true);
-                        }
-                    });
-
-                    observer.observe(document, { childList: true, subtree: true });
-                });
-            }, QR_SCANNED);
-            return isScanned || false;
+            return await isElementInDom(page, QR_SCANNED)
         } catch (error) {
             return false;
+        }
+    }
+
+    private async qrCodeScanned(page: Page | undefined): Promise<boolean> {
+        return isElementInDom(page!, QR_SCANNED);
+    }
+
+    private async checkForQrScan(): Promise<void> {
+        while (true) {
+            const isQrScanned: boolean = await this.qrCodeScanned(this.page!);
+
+            if (isQrScanned) {
+                this.Events.emitAuthenticated('Authenticated');
+                break;
+            }
+            await this.waitFor(1000);
         }
     }
 
