@@ -32,8 +32,6 @@ export class Client {
             await this.setPageSettings()
             await this.goToPage(this.page!)
 
-            this.Events.emitReady('Client initialized!')
-
             const isAuthenticated: boolean = await this.isUserAuthenticated(this.page!)
 
             if (isAuthenticated) {
@@ -57,7 +55,12 @@ export class Client {
             const pages: Page[] = await this.browser.pages()
             this.page =
                 pages.length > 0 ? pages[0] : await this.browser.newPage()
+
+            if (this.browser && this.page) {
+                this.Events.emitReady('Client initialized!')
+            }
         } catch (error) {
+            this.Events.emitReady('Error during client initialization!', error as Error)
             throw error
         }
     }

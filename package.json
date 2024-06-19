@@ -6,7 +6,8 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsup"
+    "build": "tsup",
+    "launch:dev": "yarn build && node test.js"
   },
   "keywords": [
     "whatsapp-web-js",
