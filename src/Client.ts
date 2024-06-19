@@ -3,6 +3,7 @@ import { DEFAULT_CLIENT_OPTIONS, WHATSAPP_WEB_URL } from './helpers/constants'
 import { ClientOptions } from './types'
 import { WhatzupEvents } from './Events/Events'
 import { INTRO_QRCODE_SELECTOR, QR_CONTAINER, QR_SCANNED } from './selectors/selectors'
+import { BaseAuthStrategy } from './authStrategies/BaseAuthStrategy'
 import { S3Auth } from './authStrategies/S3Auth'
 
 export class Client {
@@ -10,11 +11,15 @@ export class Client {
     private page?: Page
     private browser?: Browser
     private Events: WhatzupEvents
-    private readonly s3Auth?: S3Auth
+    private authStrategy?: BaseAuthStrategy
 
     constructor(options: ClientOptions = {}) {
         this.options = { ...DEFAULT_CLIENT_OPTIONS, ...options }
         this.Events = new WhatzupEvents()
+
+        if (this.options.authStrategy) {
+            this.authStrategy = options.authStrategy;
+        }
     }
 
     on(event: string, listener: (...args: any[]) => void) {
@@ -34,10 +39,22 @@ export class Client {
 
             this.Events.emitReady('Client initialized!')
 
-            await this.waitForPageLoadingScreen(this.page)
-            await this.getQrCode(this.page)
-
             const isQrScanned = await this.qrCodeScanned(this.page);
+
+            // TODO: split into a separate method
+            if (isQrScanned) {
+                this.Events.emitAuthenticated('Authenticated')
+            }
+
+            if (!isQrScanned) {
+                await this.waitForPageLoadingScreen(this.page)
+                await this.getQrCode(this.page)
+            }
+
+            // TODO: no need this because we can pass a normal strategy
+            console.log(this.authStrategy instanceof S3Auth)
+
+            this.authStrategy?.afterBrowserInitialized()
 
         } catch (error) {
             this.Events.emitReady('Failed to initialize client', error as Error)
@@ -144,7 +161,7 @@ export class Client {
                         return;
                     }
 
-                    const observer = new MutationObserver(() => {
+                    const observer: MutationObserver = new MutationObserver(() => {
                         const scannedElement = document.querySelector(selector);
                         if (scannedElement) {
                             observer.disconnect();
@@ -155,6 +172,7 @@ export class Client {
                     observer.observe(document, { childList: true, subtree: true });
                 });
             }, QR_SCANNED);
+
             return isScanned || false;
         } catch (error) {
             return false;
