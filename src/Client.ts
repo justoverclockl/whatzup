@@ -30,12 +30,7 @@ export class Client {
         try {
             await this.initializeBrowser()
             await this.setPageSettings()
-
-            await this.page?.goto(WHATSAPP_WEB_URL, {
-                waitUntil: 'load',
-                timeout: 0,
-                referer: 'https://whatsapp.com/',
-            })
+            await this.goToPage(this.page!)
 
             this.Events.emitReady('Client initialized!')
 
@@ -63,7 +58,6 @@ export class Client {
             this.page =
                 pages.length > 0 ? pages[0] : await this.browser.newPage()
         } catch (error) {
-            console.error('Failed to launch browser:', error)
             throw error
         }
     }
@@ -83,12 +77,20 @@ export class Client {
             await this.page.setBypassCSP(this.options.bypassCSP)
         }
 
-        await this.page.evaluateOnNewDocument(() => {
+        await this.page.evaluateOnNewDocument((): void => {
             ;(window as any).Error = Error
         })
     }
 
-    private async waitForPageLoadingScreen(page: Page | undefined) {
+    private async goToPage(page: Page): Promise<void> {
+        await page?.goto(WHATSAPP_WEB_URL, {
+            waitUntil: 'load',
+            timeout: 0,
+            referer: 'https://whatsapp.com/',
+        })
+    }
+
+    private async waitForPageLoadingScreen(page: Page | undefined): Promise<void> {
         try {
             await page?.waitForSelector(INTRO_QRCODE_SELECTOR, {
                 visible: true,
@@ -108,15 +110,15 @@ export class Client {
         }
 
         const attributeValue: string | null = await page?.evaluate(
-            (selector, attribute) => {
+            (selector: string, attribute: string) => {
                 return new Promise<string | null>((resolve) => {
-                    const element = document.querySelector(selector)
+                    const element: Element | null = document.querySelector(selector)
                     if (!element) {
                         return resolve(null)
                     }
 
                     const observer: MutationObserver = new MutationObserver(
-                        () => {
+                        (): void => {
                             if (element.hasAttribute(attribute)) {
                                 const value: string | null =
                                     element.getAttribute(attribute)
@@ -129,7 +131,7 @@ export class Client {
                     observer.observe(element, { attributes: true })
 
                     if (element.hasAttribute(attribute)) {
-                        const initialValue = element.getAttribute(attribute)
+                        const initialValue: string | null = element.getAttribute(attribute)
                         observer.disconnect()
                         resolve(initialValue)
                     }
