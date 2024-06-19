@@ -1,14 +1,18 @@
-import { ClientOptions, WhatsappEvents, WhatsappStatus } from '../types'
+import { ClientOptions, PuppeteerOptions, WhatsappEvents, WhatsappStatus } from '../types'
+import { BaseAuthStrategy } from '../authStrategies/BaseAuthStrategy'
 
 
 export const WHATSAPP_WEB_URL: string = "https://web.whatsapp.com/";
-export const DEFAULT_CLIENT_OPTIONS: ClientOptions = {
-  puppeteer: {
+
+export const DEFAULT_PUPPETEER_OPTIONS: PuppeteerOptions = {
     headless: false,
     defaultViewport: null,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
     userDataDir: './.whatzup'
-  },
+}
+
+export const DEFAULT_CLIENT_OPTIONS: ClientOptions = {
+  authStrategy: new BaseAuthStrategy(),
   authTimeoutMs: 0,
   qrMaxRetries: 0,
   takeoverOnConflict: false,
@@ -17,7 +21,7 @@ export const DEFAULT_CLIENT_OPTIONS: ClientOptions = {
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36",
   ffmpegPath: "ffmpeg",
   bypassCSP: false,
-  proxyAuthentication: undefined,
+  proxyAuthentication: undefined
 };
 
 export const WHATSAPP_STATUS = {

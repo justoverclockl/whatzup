@@ -1,4 +1,4 @@
-import { Client } from '../Client'
+
 
 export class BaseAuthStrategy {
     constructor() {

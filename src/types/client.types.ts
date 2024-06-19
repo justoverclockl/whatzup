@@ -1,4 +1,5 @@
 import { S3Auth } from '../authStrategies/S3Auth'
+import { BaseAuthStrategy } from '../authStrategies/BaseAuthStrategy'
 
 export type PuppeteerArgs =
     | '--no-sandbox'
@@ -29,14 +30,15 @@ export type PuppeteerArgs =
     | '--mute-audio'
     | '--disable-web-security'
 
-export interface ClientOptions {
-    puppeteer?: {
+export interface PuppeteerOptions {
         headless: boolean
         defaultViewport: null
         args: PuppeteerArgs[]
         userDataDir: string
-    }
-    authStrategy?: S3Auth
+}
+
+export interface ClientOptions {
+    authStrategy: BaseAuthStrategy
     browserWSEndpoint?: string
     browserURL?: string
     authTimeoutMs?: number

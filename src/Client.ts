@@ -1,5 +1,5 @@
 import puppeteer, { Browser, Page } from 'puppeteer'
-import { DEFAULT_CLIENT_OPTIONS, WHATSAPP_WEB_URL } from './helpers/constants'
+import { DEFAULT_CLIENT_OPTIONS, DEFAULT_PUPPETEER_OPTIONS, WHATSAPP_WEB_URL } from './helpers/constants'
 import { ClientOptions } from './types'
 import { WhatzupEvents } from './Events/Events'
 import { INTRO_QRCODE_SELECTOR, QR_CONTAINER, QR_SCANNED } from './selectors/selectors'
@@ -11,15 +11,16 @@ export class Client {
     private page?: Page
     private browser?: Browser
     private Events: WhatzupEvents
-    private readonly authStrategy?: BaseAuthStrategy
+    private readonly authStrategy: BaseAuthStrategy
 
-    constructor(options: ClientOptions = {}) {
+    constructor(options: ClientOptions) {
         this.options = { ...DEFAULT_CLIENT_OPTIONS, ...options }
         this.Events = new WhatzupEvents()
+        this.authStrategy = options.authStrategy
 
-        if (this.options.authStrategy) {
+        /*if (this.options.authStrategy) {
             this.authStrategy = options.authStrategy;
-        }
+        }*/
     }
 
     on(event: string, listener: (...args: any[]) => void) {
@@ -42,7 +43,7 @@ export class Client {
                 await this.checkForQrScan()
             }
 
-            this.authStrategy?.afterBrowserInitialized()
+            await this.authStrategy.afterBrowserInitialized()
 
         } catch (error) {
             this.Events.emitReady('Failed to initialize client', error as Error)
@@ -51,7 +52,7 @@ export class Client {
 
     private async initializeBrowser(): Promise<void> {
         try {
-            this.browser = await puppeteer.launch(this.options.puppeteer)
+            this.browser = await puppeteer.launch(DEFAULT_PUPPETEER_OPTIONS)
             const pages: Page[] = await this.browser.pages()
             this.page =
                 pages.length > 0 ? pages[0] : await this.browser.newPage()
