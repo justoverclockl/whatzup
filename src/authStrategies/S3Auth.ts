@@ -5,6 +5,7 @@ import { S3Client, PutObjectCommand, HeadObjectCommand, HeadObjectOutput } from 
 import path from 'node:path'
 import { WhatzupEvents } from '../Events/Events'
 import { BaseAuthStrategy } from './BaseAuthStrategy'
+import archiver from 'archiver';
 
 const readdir = promisify(fs.readdir);
 const stat = promisify(fs.stat);
@@ -37,16 +38,38 @@ export class S3Auth extends BaseAuthStrategy {
         });
     }
 
+    public async beforeBrowserInitialized() {
+        await this.zipAndUploadToBucket();
+    }
+
     public async afterBrowserInitialized(): Promise<void> {
+        console.log('started')
         if (fs.existsSync(this.sessionPath)) {
             try {
-                await this.uploadFolder(this.sessionPath);
+                //await this.uploadFolder(this.sessionPath);
             } catch (error) {
                 throw error;
             }
         } else {
             console.log('no folder detected');
         }
+    }
+
+    private async zipAndUploadToBucket() {
+        console.log(this.sessionPath)
+        const zipFilePath = path.join(process.cwd(), 'whatzup.zip');
+        const output = fs.createWriteStream(zipFilePath)
+        const archive = archiver('zip', {
+            zlib: { level: 9 }
+        })
+        output.on('close', function() {
+            console.log(archive.pointer() + ' total bytes');
+            console.log('archiver has been finalized and the output file descriptor has closed.');
+            console.log('Zip file path:', zipFilePath);
+        });
+        archive.pipe(output);
+        archive.directory(this.sessionPath, false);
+        await archive.finalize();
     }
 
     private async isFileAlreadyUploaded(filePath: string): Promise<{ exists: boolean; metadata?: HeadObjectOutput }> {
