@@ -1,3 +1,5 @@
+import { Client } from '../Client'
+import { Browser } from 'puppeteer'
 
 
 export class BaseAuthStrategy {
@@ -7,5 +9,5 @@ export class BaseAuthStrategy {
     async beforeBrowserInitialized() {}
     async afterBrowserInitialized() {}
     async destroy() {}
-    async logout() {}
+    async logout(client: Client, browser: Browser, sessionDir: string) {}
 }
