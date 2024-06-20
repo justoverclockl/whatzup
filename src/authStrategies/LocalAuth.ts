@@ -2,9 +2,9 @@ import { BaseAuthStrategy } from './BaseAuthStrategy'
 import { Client } from '../Client'
 import { Browser, Page } from 'puppeteer'
 import * as fs from 'node:fs/promises'
-import path from 'node:path'
 
 export class LocalAuth extends BaseAuthStrategy {
+
     constructor() {
         super()
     }
@@ -19,16 +19,14 @@ export class LocalAuth extends BaseAuthStrategy {
 
         await browser.close()
 
-        const sessionPath: string = path.join(process.cwd(), '.whatzup');
         try {
             if (await fs.stat(sessionDir)) {
                 await fs.rm(sessionDir, { recursive: true, force: true });
             }
         } catch (error) {
-            console.error(`Failed to delete session path: ${sessionPath}`, error);
         }
 
-        await client.waitFor(2000)
+        await client.waitFor(7000)
         await client.initialize()
     }
 }

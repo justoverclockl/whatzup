@@ -28,6 +28,7 @@ export interface WhatsappEvents {
     INCOMING_CALL: string
     REMOTE_SESSION_SAVED: string
     VOTE_UPDATE: string
+    LOGOUT: string
 }
 
 export type EventMessage = string;

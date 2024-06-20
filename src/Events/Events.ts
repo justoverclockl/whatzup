@@ -8,6 +8,7 @@ export class WhatzupEvents extends EventEmitter {
     static readonly QR_CODE_READY: string = EVENTS.QR_RECEIVED
     static readonly S3_SESSION_SAVED: string = EVENTS.REMOTE_SESSION_SAVED
     static readonly AUTHENTICATED: string = EVENTS.AUTHENTICATED
+    static readonly LOGOUT: string = EVENTS.LOGOUT
 
     constructor() {
         super()
@@ -41,5 +42,11 @@ export class WhatzupEvents extends EventEmitter {
         error
             ? this.emit(WhatzupEvents.S3_SESSION_SAVED, { message, error })
             : this.emit(WhatzupEvents.S3_SESSION_SAVED, message)
+    }
+
+    emitLogout(message: EventMessage, error?: Error) {
+        error
+            ? this.emit(WhatzupEvents.LOGOUT, { message, error })
+            : this.emit(WhatzupEvents.LOGOUT, message)
     }
 }

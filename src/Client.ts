@@ -176,6 +176,7 @@ export class Client {
 
     async logout(): Promise<void> {
         await this.authStrategy.logout(this, this.browser!, this.puppeteerOptions?.userDataDir!)
+        this.Events.emitLogout('logout executed')
     }
 
     async waitFor(ms: number): Promise<void> {
