@@ -27,7 +27,9 @@ export class Client {
 
     async initialize(): Promise<void> {
         try {
+            await this.authStrategy.beforeBrowserInitialized()
             await this.initializeBrowser()
+            await this.authStrategy.afterBrowserInitialized()
             await this.setPageSettings()
             await this.goToPage(this.page!)
 
@@ -41,7 +43,7 @@ export class Client {
                 await this.checkForQrScan()
             }
 
-            await this.authStrategy.afterBrowserInitialized()
+
 
         } catch (error) {
             this.Events.emitReady('Failed to initialize client', error as Error)

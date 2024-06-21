@@ -1,52 +1,46 @@
-import { EventEmitter } from 'node:events'
-import { EVENTS } from '../helpers/constants'
-import { EventMessage } from '../types'
+import { EventEmitter } from 'node:events';
+import { EVENTS } from '../helpers/constants';
+import { EventMessage } from '../types';
 
 export class WhatzupEvents extends EventEmitter {
-    static readonly READY: string = EVENTS.READY
-    static readonly LOADED: string = EVENTS.LOADED
-    static readonly QR_CODE_READY: string = EVENTS.QR_RECEIVED
-    static readonly S3_SESSION_SAVED: string = EVENTS.REMOTE_SESSION_SAVED
-    static readonly AUTHENTICATED: string = EVENTS.AUTHENTICATED
-    static readonly LOGOUT: string = EVENTS.LOGOUT
+    static readonly READY: string = EVENTS.READY;
+    static readonly LOADED: string = EVENTS.LOADED;
+    static readonly QR_CODE_READY: string = EVENTS.QR_RECEIVED;
+    static readonly S3_SESSION_SAVED: string = EVENTS.REMOTE_SESSION_SAVED;
+    static readonly AUTHENTICATED: string = EVENTS.AUTHENTICATED;
+    static readonly LOGOUT: string = EVENTS.LOGOUT;
 
     constructor() {
-        super()
+        super();
     }
 
-    emitReady(message: EventMessage, error?: Error) {
-        error
-            ? this.emit(WhatzupEvents.READY, { message, error })
-            : this.emit(WhatzupEvents.READY, message)
+    emitReady(message: string, error?: Error) {
+        const eventMessage: EventMessage = error ? { message, error } : { message };
+        this.emit(WhatzupEvents.READY, eventMessage);
     }
 
-    emitLoadComplete(message: EventMessage, error?: Error) {
-        error
-            ? this.emit(WhatzupEvents.LOADED, { message, error })
-            : this.emit(WhatzupEvents.LOADED, message)
+    emitLoadComplete(message: string, error?: Error) {
+        const eventMessage: EventMessage = error ? { message, error } : { message };
+        this.emit(WhatzupEvents.LOADED, eventMessage);
     }
 
-    emitQr(qr: EventMessage | Promise<string>, error?: Error) {
-        error
-            ? this.emit(WhatzupEvents.QR_CODE_READY, { error })
-            : this.emit(WhatzupEvents.QR_CODE_READY, qr)
+    emitQr(qr: string, error?: Error) {
+        const eventMessage: EventMessage = error ? { message: qr, error } : { message: qr };
+        this.emit(WhatzupEvents.QR_CODE_READY, eventMessage);
     }
 
-    emitAuthenticated(message: EventMessage, error?: Error) {
-        error
-            ? this.emit(WhatzupEvents.AUTHENTICATED, { message, error })
-            : this.emit(WhatzupEvents.AUTHENTICATED, message)
+    emitAuthenticated(message: string, error?: Error) {
+        const eventMessage: EventMessage = error ? { message, error } : { message };
+        this.emit(WhatzupEvents.AUTHENTICATED, eventMessage);
     }
 
-    emitS3SessionSaved(message: EventMessage, error?: Error) {
-        error
-            ? this.emit(WhatzupEvents.S3_SESSION_SAVED, { message, error })
-            : this.emit(WhatzupEvents.S3_SESSION_SAVED, message)
+    emitS3SessionSaved(message: string, error?: Error) {
+        const eventMessage: EventMessage = error ? { message, error } : { message };
+        this.emit(WhatzupEvents.S3_SESSION_SAVED, eventMessage);
     }
 
-    emitLogout(message: EventMessage, error?: Error) {
-        error
-            ? this.emit(WhatzupEvents.LOGOUT, { message, error })
-            : this.emit(WhatzupEvents.LOGOUT, message)
+    emitLogout(message: string, error?: Error) {
+        const eventMessage: EventMessage = error ? { message, error } : { message };
+        this.emit(WhatzupEvents.LOGOUT, eventMessage);
     }
 }

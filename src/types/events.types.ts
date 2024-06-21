@@ -31,4 +31,7 @@ export interface WhatsappEvents {
     LOGOUT: string
 }
 
-export type EventMessage = string;
+export interface EventMessage {
+    message: string;
+    error?: Error;
+}
