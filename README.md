@@ -15,7 +15,7 @@ The WhatsApp API client connects through the WhatsApp Web browser app, accessing
 
 ```javascript
 
-// istanciate a new client with your strategy
+// istantiate a new client with your strategy
 const client = new Client({
     authStrategy: new LocalAuth()
 })
