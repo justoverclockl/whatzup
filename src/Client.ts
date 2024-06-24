@@ -5,6 +5,7 @@ import { WhatzupEvents } from './Events/Events'
 import { INTRO_QRCODE_SELECTOR, QR_CONTAINER, QR_SCANNED } from './selectors/selectors'
 import { BaseAuthStrategy } from './authStrategies/BaseAuthStrategy'
 import { isElementInDom } from './utils/elementObserver'
+import { Chat } from './services'
 
 export class Client {
     private readonly puppeteerOptions?: PuppeteerOptions
@@ -13,6 +14,8 @@ export class Client {
     private browser?: Browser
     private Events: WhatzupEvents
     private readonly authStrategy: BaseAuthStrategy
+
+    public chat?: Chat
 
     constructor(options: ClientOptions, puppeteerOptions: Partial<PuppeteerOptions> = {}) {
         this.puppeteerOptions = { ...DEFAULT_PUPPETEER_OPTIONS, ...puppeteerOptions }
@@ -32,6 +35,7 @@ export class Client {
             await this.authStrategy.afterBrowserInitialized()
             await this.setPageSettings()
             await this.goToPage(this.page!)
+            this.initializeServices()
 
             const isAuthenticated: boolean = await this.isUserAuthenticated(this.page!)
 
@@ -176,6 +180,12 @@ export class Client {
         }
     }
 
+    private initializeServices() {
+        if (this.page) {
+            this.chat = new Chat(this.page);
+        }
+    }
+
     async logout(): Promise<void> {
         await this.authStrategy.logout(this, this.browser!, this.puppeteerOptions?.userDataDir!)
         this.Events.emitLogout('logout executed')
@@ -183,5 +193,10 @@ export class Client {
 
     async waitFor(ms: number): Promise<void> {
         return new Promise<void>(resolve => setTimeout(() => resolve(), ms));
+    }
+
+    async getChats() {
+        await this.waitFor(2000)
+        return this.chat?.getChats()
     }
 }
