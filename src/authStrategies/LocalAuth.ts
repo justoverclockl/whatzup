@@ -26,7 +26,7 @@ export class LocalAuth extends BaseAuthStrategy {
         } catch (error) {
         }
 
-        await client.waitFor(7000)
+        await client.waitFor(2000)
         await client.initialize()
     }
 }

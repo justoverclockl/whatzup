@@ -1,4 +1,5 @@
 import { Page } from 'puppeteer'
+import { WhatzupEvents } from '../Events/Events'
 
 export const isElementInDom = async (page: Page, elementSelector: string): Promise<boolean> => {
     try {
@@ -32,4 +33,54 @@ export const isElementInDom = async (page: Page, elementSelector: string): Promi
     } catch (error) {
         return false;
     }
+}
+
+
+export const observeAndGetElementAttribute = async (
+    page: Page,
+    elementSelector: string,
+    elementAttribute: string,
+    event: WhatzupEvents
+) => {
+    if (!page) {
+        return null
+    }
+
+    const attributeValue: string | null = await page?.evaluate(
+        (selector: string, attribute: string) => {
+            return new Promise<string | null>((resolve) => {
+                const element: Element | null = document.querySelector(selector)
+                if (!element) {
+                    return resolve(null)
+                }
+
+                const observer: MutationObserver = new MutationObserver(
+                    (): void => {
+                        if (element.hasAttribute(attribute)) {
+                            const value: string | null =
+                                element.getAttribute(attribute)
+                            observer.disconnect()
+                            resolve(value)
+                        }
+                    }
+                )
+
+                observer.observe(element, { attributes: true })
+
+                if (element.hasAttribute(attribute)) {
+                    const initialValue: string | null = element.getAttribute(attribute)
+                    observer.disconnect()
+                    resolve(initialValue)
+                }
+            })
+        },
+        elementSelector,
+        elementAttribute
+    )
+
+    if (attributeValue !== null) {
+        event.emitQr(attributeValue)
+    }
+
+    return attributeValue
 }
