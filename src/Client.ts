@@ -2,17 +2,18 @@ import puppeteer, { Browser, Page } from 'puppeteer'
 import { DEFAULT_CLIENT_OPTIONS, DEFAULT_PUPPETEER_OPTIONS, WHATSAPP_WEB_URL } from './helpers/constants'
 import { ClientOptions, PuppeteerOptions } from './types'
 import { WhatzupEvents } from './Events/Events'
-import { INTRO_QRCODE_SELECTOR, QR_CONTAINER, QR_SCANNED } from './selectors/selectors'
+import { INTRO_QRCODE_SELECTOR, QR_ATTRIBUTE, QR_CONTAINER, QR_SCANNED } from './selectors/selectors'
 import { BaseAuthStrategy } from './authStrategies/BaseAuthStrategy'
-import { isElementInDom } from './utils/elementObserver'
 import { Chat } from './services'
+import { isElementInDom, observeAndGetElementAttribute } from './utils/elementObserver'
+
 
 export class Client {
     private readonly puppeteerOptions?: PuppeteerOptions
     private options: ClientOptions
     private page?: Page
     private browser?: Browser
-    private Events: WhatzupEvents
+    private readonly Events: WhatzupEvents
     private readonly authStrategy: BaseAuthStrategy
 
     public chat?: Chat
@@ -34,16 +35,16 @@ export class Client {
             await this.initializeBrowser()
             await this.authStrategy.afterBrowserInitialized()
             await this.setPageSettings()
-            await this.goToPage(this.page!)
-            this.initializeServices()
 
-            const isAuthenticated: boolean = await this.isUserAuthenticated(this.page!)
+            await this.goToPage()
+            
+            const isAuthenticated: boolean = await this.isUserAuthenticated()
 
             if (isAuthenticated) {
                 this.Events.emitAuthenticated('Authenticated')
             } else {
-                await this.waitForPageLoadingScreen(this.page)
-                await this.getQrCode(this.page)
+                await this.waitForPageLoadingScreen()
+                await this.getQrCode()
                 await this.checkForQrScan()
             }
 
@@ -90,17 +91,17 @@ export class Client {
         })
     }
 
-    private async goToPage(page: Page): Promise<void> {
-        await page?.goto(WHATSAPP_WEB_URL, {
-            waitUntil: 'load',
+    private async goToPage(): Promise<void> {
+        await this.page?.goto(WHATSAPP_WEB_URL, {
+            waitUntil: 'networkidle0',
             timeout: 0,
             referer: 'https://whatsapp.com/',
         })
     }
 
-    private async waitForPageLoadingScreen(page: Page | undefined): Promise<void> {
+    private async waitForPageLoadingScreen(): Promise<void> {
         try {
-            await page?.waitForSelector(INTRO_QRCODE_SELECTOR, {
+            await this.page?.waitForSelector(INTRO_QRCODE_SELECTOR, {
                 visible: true,
             })
             this.Events.emitLoadComplete('Page loaded, ready to scan QR!')
@@ -112,65 +113,30 @@ export class Client {
         }
     }
 
-    private async getQrCode(page: Page | undefined): Promise<string | null> {
-        if (!page) {
-            return null
-        }
-
-        const attributeValue: string | null = await page?.evaluate(
-            (selector: string, attribute: string) => {
-                return new Promise<string | null>((resolve) => {
-                    const element: Element | null = document.querySelector(selector)
-                    if (!element) {
-                        return resolve(null)
-                    }
-
-                    const observer: MutationObserver = new MutationObserver(
-                        (): void => {
-                            if (element.hasAttribute(attribute)) {
-                                const value: string | null =
-                                    element.getAttribute(attribute)
-                                observer.disconnect()
-                                resolve(value)
-                            }
-                        }
-                    )
-
-                    observer.observe(element, { attributes: true })
-
-                    if (element.hasAttribute(attribute)) {
-                        const initialValue: string | null = element.getAttribute(attribute)
-                        observer.disconnect()
-                        resolve(initialValue)
-                    }
-                })
-            },
+    private async getQrCode(): Promise<void> {
+        await observeAndGetElementAttribute(
+            this.page!,
             QR_CONTAINER,
-            'data-ref'
+            QR_ATTRIBUTE,
+            this.Events,
         )
-
-        if (attributeValue !== null) {
-            this.Events.emitQr(attributeValue)
-        }
-
-        return attributeValue
     }
 
-    private async isUserAuthenticated(page: Page): Promise<boolean> {
+    private async isUserAuthenticated(): Promise<boolean> {
         try {
-            return await isElementInDom(page, QR_SCANNED)
+            return await isElementInDom(this.page!, QR_SCANNED)
         } catch (error) {
             return false;
         }
     }
 
-    private async qrCodeScanned(page: Page | undefined): Promise<boolean> {
-        return isElementInDom(page!, QR_SCANNED);
+    private async qrCodeScanned(): Promise<boolean> {
+        return isElementInDom(this.page!, QR_SCANNED);
     }
 
     private async checkForQrScan(): Promise<void> {
         while (true) {
-            const isQrScanned: boolean = await this.qrCodeScanned(this.page!);
+            const isQrScanned: boolean = await this.qrCodeScanned();
 
             if (isQrScanned) {
                 this.Events.emitAuthenticated('Authenticated');
