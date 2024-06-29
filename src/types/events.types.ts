@@ -29,6 +29,7 @@ export interface WhatsappEvents {
     REMOTE_SESSION_SAVED: string
     VOTE_UPDATE: string
     LOGOUT: string
+    CHAT_LOADED: string
 }
 
 export interface EventMessage {

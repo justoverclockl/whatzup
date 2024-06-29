@@ -1,6 +1,8 @@
 import { Page } from 'puppeteer'
-import { CHAT_LIST_CONTAINER, CHAT_LIST_ITEM_SELECTOR, QR_CONTAINER } from '../selectors/selectors'
-import { isElementInDom } from '../utils/elementObserver'
+import { CHAT_LIST_ITEM_SELECTOR } from '../selectors/selectors'
+import {load} from 'cheerio'
+
+
 
 export class Chat {
     private readonly page: Page
@@ -9,56 +11,22 @@ export class Chat {
         this.page = page
     }
 
-    /*async getChats() {
-        try {
-            await this.page.waitForSelector('.x10l6tqk', { visible: false });
-
-            const chats = await this.page.$$eval('.x10l6tqk', elements => {
-                return elements.map(element => {
-                    const titleElement = element.querySelector('._aou8 > span');
-
-                    if (titleElement) {
-                        const title = titleElement.textContent
-                        return {
-                            title: title,
-                        };
-                    }
-                }).filter(chat => chat !== null)
-            })
-            return chats
-        } catch (error) {
-            console.error('Error finding elements:', error);
-            return [];
-        }
-    }*/
-
     async getChats() {
-        const containerSelector = CHAT_LIST_CONTAINER;
-        const elementSelector = CHAT_LIST_ITEM_SELECTOR;
-
         try {
-            await this.page.evaluate(async (containerSelector) => {
-                const container = document.querySelector(containerSelector);
-                if (container) {
-                    container.scrollTop = container.scrollHeight;
-                    await new Promise(resolve => setTimeout(resolve, 4000));
-                }
-            }, containerSelector);
+            // TODO: find a method to retrieve all chats because this not work
 
-            const elements = await this.page.$$eval(elementSelector, elements =>
+            const elements = await this.page.$$eval(CHAT_LIST_ITEM_SELECTOR, elements =>
                 elements.map(element => {
-                    const titleElement = element.querySelector('._aou8._aj_h > span');
-
-                    if (titleElement) {
-                        const title = titleElement.textContent
-                        return {
-                            title: title,
-                        };
-                    }
-                }).filter(chat => chat !== null)
+                    return element.outerHTML
+                })
             );
 
-            console.log('Elements found:', elements);
+            const $ = load(elements.join(''))
+            const title = $('div._ak8l > div._ak8o > div._ak8q > div > span')
+            title.each((i, element) => {
+                console.log($(element).text())
+            })
+
 
         } catch (error) {
             console.error('Error finding elements:', error);
