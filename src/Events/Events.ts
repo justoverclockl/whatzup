@@ -9,6 +9,7 @@ export class WhatzupEvents extends EventEmitter {
     static readonly S3_SESSION_SAVED: string = EVENTS.REMOTE_SESSION_SAVED;
     static readonly AUTHENTICATED: string = EVENTS.AUTHENTICATED;
     static readonly LOGOUT: string = EVENTS.LOGOUT;
+    static readonly CHAT_LOADED: string = EVENTS.CHAT_LOADED;
 
     constructor() {
         super();
@@ -22,6 +23,11 @@ export class WhatzupEvents extends EventEmitter {
     emitLoadComplete(message: string, error?: Error) {
         const eventMessage: EventMessage = error ? { message, error } : { message };
         this.emit(WhatzupEvents.LOADED, eventMessage);
+    }
+
+    emitChatLoaded(message: string, error?: Error) {
+        const eventMessage: EventMessage = error ? { message, error } : { message };
+        this.emit(WhatzupEvents.CHAT_LOADED, eventMessage);
     }
 
     emitQr(qr: string, error?: Error) {

@@ -61,4 +61,5 @@ export const EVENTS: WhatsappEvents = {
   REMOTE_SESSION_SAVED: "remote_session_saved",
   VOTE_UPDATE: "vote_update",
   LOGOUT: "logout",
+  CHAT_LOADED: "chat_loaded"
 };

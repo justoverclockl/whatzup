@@ -2,9 +2,17 @@ import puppeteer, { Browser, Page } from 'puppeteer'
 import { DEFAULT_CLIENT_OPTIONS, DEFAULT_PUPPETEER_OPTIONS, WHATSAPP_WEB_URL } from './helpers/constants'
 import { ClientOptions, PuppeteerOptions } from './types'
 import { WhatzupEvents } from './Events/Events'
-import { INTRO_QRCODE_SELECTOR, QR_ATTRIBUTE, QR_CONTAINER, QR_SCANNED } from './selectors/selectors'
+import {
+    INTRO_QRCODE_SELECTOR,
+    PROGRESS_BAR_XPATH, PROGRESS_MESSAGE_XPATH,
+    QR_ATTRIBUTE,
+    QR_CONTAINER,
+    QR_SCANNED,
+} from './selectors/selectors'
 import { BaseAuthStrategy } from './authStrategies/BaseAuthStrategy'
+import { Chat } from './services'
 import { isElementInDom, observeAndGetElementAttribute } from './utils/elementObserver'
+
 
 export class Client {
     private readonly puppeteerOptions?: PuppeteerOptions
@@ -13,6 +21,8 @@ export class Client {
     private browser?: Browser
     private readonly Events: WhatzupEvents
     private readonly authStrategy: BaseAuthStrategy
+
+    public chat?: Chat
 
     constructor(options: ClientOptions, puppeteerOptions: Partial<PuppeteerOptions> = {}) {
         this.puppeteerOptions = { ...DEFAULT_PUPPETEER_OPTIONS, ...puppeteerOptions }
@@ -31,7 +41,11 @@ export class Client {
             await this.initializeBrowser()
             await this.authStrategy.afterBrowserInitialized()
             await this.setPageSettings()
+
+
             await this.goToPage()
+            await this.provideXpathGet()
+            await this.checkSessionPageLoadingBar();
 
             const isAuthenticated: boolean = await this.isUserAuthenticated()
 
@@ -59,6 +73,7 @@ export class Client {
 
             if (this.browser && this.page) {
                 this.Events.emitReady('Client initialized!')
+                this.chat = new Chat(this.page);
             }
         } catch (error) {
             this.Events.emitReady('Error during client initialization!', error as Error)
@@ -141,6 +156,46 @@ export class Client {
         }
     }
 
+    private async checkSessionPageLoadingBar(): Promise<void> {
+        let lastPercent: null = null;
+        let lastPercentMessage: null = null;
+
+        await this.page?.exposeFunction('loadingScreen', async (percent: any, message: any): Promise<void> => {
+            if (lastPercent !== percent || lastPercentMessage !== message) {
+                lastPercent = percent;
+                lastPercentMessage = message;
+            }
+
+            if (lastPercent === 100) {
+                this.Events.emitChatLoaded('chat loaded')
+            }
+        });
+
+        await this.page?.evaluate(async (selectors): Promise<void> => {
+            const observer: MutationObserver = new MutationObserver(async (): Promise<void> => {
+                const progressBar: HTMLProgressElement | null = window.getElementByXPath(selectors.PROGRESS) as HTMLProgressElement | null
+                const progressMessage: HTMLElement | null = window.getElementByXPath(selectors.PROGRESS_MESSAGE) as HTMLElement | null
+
+                if (progressBar && progressMessage) {
+                    window.loadingScreen(
+                        progressBar.value,
+                        progressMessage.innerText
+                    );
+                }
+            });
+
+            observer.observe(document, {
+                attributes: true,
+                childList: true,
+                characterData: true,
+                subtree: true,
+            });
+        }, {
+            PROGRESS: PROGRESS_BAR_XPATH,
+            PROGRESS_MESSAGE: PROGRESS_MESSAGE_XPATH,
+        });
+    }
+
     async logout(): Promise<void> {
         await this.authStrategy.logout(this, this.browser!, this.puppeteerOptions?.userDataDir!)
         this.Events.emitLogout('logout executed')
@@ -148,5 +203,19 @@ export class Client {
 
     async waitFor(ms: number): Promise<void> {
         return new Promise<void>(resolve => setTimeout(() => resolve(), ms));
+    }
+
+    async provideXpathGet(): Promise<void> {
+        await this.page?.evaluate((): void => {
+            window.getElementByXPath = function (path: string): Element | null {
+                const result: Node | null = document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+                return result as Element | null;
+            };
+        });
+    }
+
+    async getChats() {
+        await this.waitFor(2000)
+        return this.chat?.getChats()
     }
 }
